@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Cafe Finder</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">☕</span>
+      <div><h1>Cafe Finder</h1><p>Cafes near you, ranked for your taste</p></div>
+    </div>
+    <form id="search" class="search" role="search">
+      <button type="button" id="locate" class="btn">📍 Use my location</button>
+      <label class="field"><span aria-hidden="true">🔎</span>
+        <input id="q" list="recent" placeholder="…or type an area, city or address" autocomplete="off" aria-label="Location">
+        <datalist id="recent"></datalist>
+      </label>
+      <button class="btn primary">Search</button>
+      <label class="radius">
+        <span>Search within <output id="radiusVal" for="radius">2 km</output></span>
+        <input type="range" id="radius" min="1" max="15" step="1" value="2" aria-label="Search radius in kilometres">
+        <span class="ticks" aria-hidden="true"><i style="left:0%">1</i><i style="left:28.57%">5</i><i style="left:64.29%">10</i><i style="left:100%">15 km</i></span>
+      </label>
+    </form>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="results" class="on" aria-selected="true">Cafes</button>
+      <button role="tab" data-tab="saved" aria-selected="false">My list</button>
+      <button role="tab" data-tab="prefs" aria-selected="false">My taste</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="results" class="tab">
+    <div id="status" role="status" aria-live="polite" hidden></div>
+    <div id="weather" class="weather" hidden></div>
+    <div id="toolbar" class="toolbar" hidden>
+      <div class="tb-top">
+        <label class="field compact"><span aria-hidden="true">🔎</span>
+          <input id="nameFilter" type="search" placeholder="Filter by cafe name…" autocomplete="off" aria-label="Filter results by cafe name">
+        </label>
+        <button type="button" id="pick" class="btn small">🎲 Pick one for me</button>
+      </div>
+      <div class="tb-row">
+        <div id="chips" class="chips"></div>
+        <label class="sort">Sort by
+          <select id="sort"><option value="match">Best match</option><option value="distance">Nearest</option></select>
+        </label>
+      </div>
+      <div class="tb-row at">
+        <label class="atlabel">🕒 Open at
+          <input type="datetime-local" id="atTime" aria-label="Check opening status at a specific time (local time at the cafes)">
+        </label>
+        <button type="button" id="atNow" class="link" hidden>Back to now</button>
+        <span id="atNote" class="muted"></span>
+      </div>
+    </div>
+    <div id="list"></div>
+  </section>
+  <section id="saved" class="tab" hidden>
+    <div id="savedList"></div>
+    <details class="backup" id="backupPanel">
+      <summary>Backup &amp; export</summary>
+      <div class="backup-body">
+        <p class="muted">Your list, ratings, notes and taste settings are stored only on this computer. Download a backup now and then.</p>
+        <div class="backup-row">
+          <a class="btn small" href="/api/export?format=json" download>⬇ Download backup</a>
+          <label class="btn small" for="importFile">⬆ Restore from backup…</label>
+          <input type="file" id="importFile" accept="application/json,.json" hidden>
+        </div>
+        <p class="muted">Use your list in other apps:</p>
+        <div class="backup-row">
+          <select id="exportList" aria-label="Which cafes to export">
+            <option value="want">Want to go</option><option value="been">Been here</option><option value="all">Everything</option>
+          </select>
+          <a class="btn small" id="exportKml" href="/api/export?format=kml&amp;list=want" download>🗺 Google Maps (KML)</a>
+          <a class="btn small" id="exportCsv" href="/api/export?format=csv&amp;list=want" download>📄 Spreadsheet (CSV)</a>
+        </div>
+        <p class="muted">To see them on Google Maps: open <a href="https://mymaps.google.com" target="_blank" rel="noopener">My Maps</a>, create a new map, choose Import, and pick the KML file.</p>
+      </div>
+    </details>
+  </section>
+  <section id="prefs" class="tab" hidden></section>
+</main>
+
+<div id="comparebar" hidden>
+  <span id="cmpCount"></span>
+  <button type="button" id="cmpOpen" class="btn primary small">Compare</button>
+  <button type="button" id="cmpClear" class="btn small">Clear</button>
+</div>
+
+<dialog id="cmpDialog" aria-label="Compare cafes">
+  <div class="cmp-head"><h2>Compare cafes</h2><button type="button" id="cmpClose" class="btn small">Close</button></div>
+  <div id="cmpBody"></div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
