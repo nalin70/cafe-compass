@@ -8,14 +8,15 @@ export function extractFeatures(tags = {}) {
   const name = (tags.name || '').toLowerCase();
   const cuisine = (tags.cuisine || '').toLowerCase();
   const yes = (v) => v === 'yes' || v === 'wlan' || v === 'wired';
+  const diet = (v) => v === 'yes' || v === 'only' || v === 'limited'; // OSM diet:* values that mean "they serve it"
   return {
     wifi: yes(tags.internet_access) || tags['internet_access:fee'] === 'no',
     power: yes(tags.power_supply),
     outdoor: yes(tags.outdoor_seating),
     pets: yes(tags.dog) || yes(tags.pets),
-    vegan: yes(tags['diet:vegan']) || yes(tags['diet:vegetarian']),
+    vegan: diet(tags['diet:vegan']) || diet(tags['diet:vegetarian']),
     specialty: /roast|specialty|coffee_shop|espresso/.test(cuisine) || /roast|specialty|coffee lab/.test(name),
-    food: /bakery|breakfast|brunch|sandwich|cake|pastry/.test(cuisine) || tags['diet:vegan'] !== undefined || yes(tags.food),
+    food: /bakery|breakfast|brunch|sandwich|cake|pastry/.test(cuisine) || diet(tags['diet:vegan']) || yes(tags.food),
     quiet: tags.noise_level === 'low' || tags.quiet === 'yes',
   };
 }
@@ -30,20 +31,21 @@ export function haversineKm(a, b) {
 // Returns { score 0-100, reasons[] }. Weights are -5..5 per feature.
 export function scoreCafe(cafe, weights, origin, radiusKm = 2, userRating = null) {
   const feats = cafe.features;
+  // Every non-zero weight is one criterion worth |weight| points: a liked feature earns its points when present,
+  // a disliked one earns them when absent. So "avoid" settings work on their own, and penalties are never lost.
   let gained = 0, possible = 0;
   const reasons = [];
   for (const f of FEATURES) {
     const w = weights[f] || 0;
+    if (!w) continue;
+    possible += Math.abs(w);
     if (w > 0) {
-      possible += w;
       if (feats[f]) { gained += w; reasons.push(`Has ${f}`); }
       else if (w >= 3) reasons.push(`No ${f} info`);
-    } else if (w < 0 && feats[f]) {
-      gained += w; // penalty for things the user dislikes
-      reasons.push(`Has ${f} (you avoid this)`);
-    }
+    } else if (feats[f]) reasons.push(`Has ${f} (you avoid this)`);
+    else gained += -w;
   }
-  let score = possible > 0 ? (Math.max(gained, 0) / possible) * 70 : 35;
+  let score = possible > 0 ? (gained / possible) * 70 : 35;
   const dist = haversineKm(origin, cafe);
   score += 15 * Math.max(0, 1 - dist / radiusKm); // up to 15 for being close
   // Up to 15 for Google rating (3.0 -> 0, 5.0 -> full), trusted more with more reviews; neutral if unrated.

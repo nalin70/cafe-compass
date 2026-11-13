@@ -69,3 +69,26 @@ test('extracts readable details from OSM tags', () => {
   assert.equal(d.wheelchair, 'Limited wheelchair access');
   assert.equal(d.smoking, 'Non-smoking');
 });
+
+test('"avoid" preferences work even with no positive preferences', () => {
+  const w = { ...DEFAULT_WEIGHTS, pets: -5 };
+  const withPets = scoreCafe(mk({ dog: 'yes' }), w, origin);
+  const without = scoreCafe(mk({}), w, origin);
+  assert.ok(without.score > withPets.score);
+});
+
+test('penalties still count when they outweigh the matches', () => {
+  const w = { ...DEFAULT_WEIGHTS, wifi: 2, pets: -5 };
+  const a = scoreCafe(mk({ dog: 'yes' }), w, origin); // no wifi, has pets
+  const b = scoreCafe(mk({ internet_access: 'wlan', dog: 'yes' }), w, origin); // wifi and pets
+  const c = scoreCafe(mk({}), w, origin); // neither
+  assert.ok(b.score > a.score);
+  assert.ok(c.score > a.score);
+});
+
+test('diet:vegan=no does not mean vegan options or food', () => {
+  const f = extractFeatures({ 'diet:vegan': 'no' });
+  assert.ok(!f.vegan && !f.food);
+  const g = extractFeatures({ 'diet:vegan': 'only' });
+  assert.ok(g.vegan && g.food);
+});
