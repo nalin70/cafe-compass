@@ -110,12 +110,17 @@ function scheduleEnrichPoll() {
   }, 6000);
 }
 
+// Each search gets a number; a response that arrives after a newer search started is ignored, so a slow
+// earlier answer (an old radius, a background poll) can never replace newer results.
+let searchSeq = 0;
 async function search(params, { silent = false, refresh = false, poll = false } = {}) {
+  const seq = ++searchSeq;
   if (!poll) enrichPolls = 0;
   lastSearch = params;
   if (!silent) { pickedId = null; setStatus('Searching for cafes… the free OpenStreetMap server can take up to 30 seconds.', 'loading'); $('#toolbar').hidden = true; $('#list').innerHTML = skeleton(); }
   try {
     const data = await api('/api/search?' + new URLSearchParams({ ...params, radius: $('#radius').value, ...(atValue ? { at: atValue } : {}), ...(refresh ? { refresh: '1' } : {}) }));
+    if (seq !== searchSeq) return false; // a newer search has started
     if (params.q) rememberQuery(params.q);
     cafes = data.cafes; vibeEnabled = data.vibeEnabled; partial = data.partial; reviewsEnabled = data.reviewsEnabled;
     const where = data.origin.label.split(',').slice(0, 2).join(',');
@@ -130,9 +135,12 @@ async function search(params, { silent = false, refresh = false, poll = false } 
     render();
     loadWeather(data.origin);
     scheduleEnrichPoll();
+    return true;
   } catch (e) {
+    if (seq !== searchSeq) return false;
     setStatus(e.message, 'error', () => search(params));
     if (!silent) { $('#list').innerHTML = ''; $('#toolbar').hidden = true; }
+    return false;
   }
 }
 
@@ -165,7 +173,7 @@ function askForLocation(why) {
   const last = store.get('recentQ', [])[0];
   if (last) { // fall back to where you last searched instead of leaving you on an empty page
     $('#q').value = last;
-    search({ q: last }).then(() => toast(`${why} Showing your last search: ${last}`));
+    search({ q: last }).then((ok) => ok && toast(`${why} Showing your last search: ${last}`));
     return;
   }
   setStatus(`${why} Type your area, city or address above and press Search.`, 'info');

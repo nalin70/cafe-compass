@@ -263,14 +263,17 @@ export async function findCafesGoogle({ lat, lon }, radiusM) {
   });
 }
 
-const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+// Letters and digits in any script (so Japanese, Arabic, etc. names survive), accents removed.
+const norm = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}]/gu, '');
 
 // Are two listings (from different sources) the same physical cafe? Close together, and similar names.
 export function samePlace(a, b) {
   const dLat = (a.lat - b.lat) * 111000, dLon = (a.lon - b.lon) * 111000 * Math.cos((b.lat * Math.PI) / 180);
   const meters = Math.hypot(dLat, dLon);
   const [x, y] = [norm(a.name), norm(b.name)];
-  return meters < 80 && (x.includes(y) || y.includes(x) || meters < 25);
+  // An empty name would "match" anything, so names only count when both have something to compare.
+  const namesMatch = !!x && !!y && (x.includes(y) || y.includes(x));
+  return meters < 80 && (namesMatch || meters < 25);
 }
 
 // Google has no wifi/outlet/quiet data; borrow it from an OSM cafe that is the same place.
